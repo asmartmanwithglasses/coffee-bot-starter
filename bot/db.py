@@ -1,10 +1,12 @@
 from pathlib import Path
 import aiosqlite
 import logging
+import os
 
 db_logger = logging.getLogger("db")
 
-DB_PATH = Path(__file__).parent / "data.sqlite3"
+DB_FILE = os.getenv("DB_FILE")
+DB_PATH = Path(DB_FILE) if DB_FILE else (Path(__file__).parent / "data.sqlite3")
 
 CREATE_SQL = """
 PRAGMA journal_mode=WAL;
