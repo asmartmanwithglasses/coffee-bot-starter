@@ -1,0 +1,18 @@
+.venv/
+venv/
+
+__pycache__/
+*.pyc
+
+# env
+.env
+
+# local db files (если не хочешь коммитить локальную базу)
+bot/data.sqlite3
+bot/data.sqlite3-journal
+bot/data.sqlite3-wal
+bot/data.sqlite3-shm
+
+# IDE
+.idea/
+.vscode/
