@@ -10,9 +10,6 @@ from .keyboards import main_kb, drink_kb, resume_or_cancel_kb
 from .catalog import DRINKS, SIZES
 
 async def send_home(msg: Message) -> None:
-    """
-    Домашний экран: краткое приветствие + меню напитков текстом + главная клавиатура.
-    """
     drinks_text = "\n".join(DRINKS.values())
     await msg.answer(
         "Привет! Я твой кофейный бот-бариста ☕️\n\n"
@@ -23,10 +20,6 @@ async def send_home(msg: Message) -> None:
         parse_mode="Markdown",
     )
 async def start_order_flow(msg: Message, state: FSMContext) -> None:
-    """
-    Единая точка входа в оформление: по кнопке «🧾 Заказ» или по /order.
-    Если есть незавершённый заказ — просим продолжить/отменить.
-    """
     current_state = await state.get_state()
     if current_state:
         await msg.answer(
@@ -41,7 +34,6 @@ async def start_order_flow(msg: Message, state: FSMContext) -> None:
     await msg.answer("Отлично! Давай начнём заказ 🎉\n\n• Что будешь пить?",
                      reply_markup=drink_kb())
 def render_order_md(item: dict) -> str:
-    """Форматирует карточку заказа в Markdown для истории."""
     drink = DRINKS.get(item["drink"], str(item["drink"]).title())
     size  = SIZES.get(item["size"],  str(item["size"]).title())
     milk  = "Добавить" if item.get("milk") == "yes" else "Без молока"
@@ -107,14 +99,10 @@ def period_bounds(tag_or_from: str | None = None, to: str | None = None) -> tupl
     return int(start.timestamp()), int(end.timestamp())
 
 def orders_to_csv(rows: Iterable[tuple]) -> bytes:
-    """
-    Принимает rows = [(id, drink, size, milk, created_at), ...]
-    Возвращает байты CSV в UTF-8.
-    """
     buf = io.StringIO(newline="")  # текстовый буфер
     w = csv.writer(buf)
 
-    w.writerow(["id", "created_at", "drink", "size", "milk"])  # <-- пример, можешь так и оставить
+    w.writerow(["id", "created_at", "drink", "size", "milk"])
 
     for r in rows:
         oid, drink, size, milk, created = r

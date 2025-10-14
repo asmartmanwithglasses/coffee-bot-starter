@@ -38,18 +38,17 @@ logging.basicConfig(
 
 logger = logging.getLogger("bot")
 
-load_dotenv()                       # ищем файл .env
-TOKEN = os.getenv("BOT_TOKEN")      # достаем токен из переменных окружения
+load_dotenv()
+TOKEN = os.getenv("BOT_TOKEN")
 BOT_VERSION = os.getenv("BOT_VERSION", "0.1.0")
 STARTED_AT: float | None = None
-bot: Bot | None = None              # создаём объект Bot
-dp = Dispatcher()                   # диспетчер (следит за событиями)
+bot: Bot | None = None
+dp = Dispatcher()
 
 # ---------- Меню ----------
 
 BTN_RESUME = "Продолжить заказ"
 
-# единый разделитель для записи/чтения истории
 SEPARATOR = "\n\n---\n\n"
 
 QUESTION = {
@@ -101,7 +100,6 @@ async def _undo_countdown(key: tuple[int, int]):
 
         await asyncio.sleep(1)
 
-    # дедлайн вышел: если не восствновили — финализируем
     payload = UNDO_BIN.pop(key, None)
     if payload:
         with suppress(TelegramBadRequest):
@@ -220,7 +218,7 @@ async def handle_cancel_anywhere(msg: Message, state: FSMContext):
     await state.clear()
     await msg.answer("Заказ отменён ❌", reply_markup=main_kb())
 
-@dp.message(CommandStart())         # реагирует на /start
+@dp.message(CommandStart())
 async def handle_start(message: Message):
     await send_home(message)
 
@@ -288,7 +286,7 @@ async def handle_stats(message: Message):
     u_today = s_today + 24 * 60 * 60
 
     today_rows = await drink_counts_between(user_id=uid, since=s_today, until=u_today)
-    # all time
+
     all_rows = await drink_counts_between(user_id=uid, since=0, until=2_147_483_647)
 
     today_cnt = Counter(dict(today_rows))
@@ -324,8 +322,8 @@ async def on_delete_confirm(callback: CallbackQuery):
     key, rec = remember_deleted(
         user_id=callback.from_user.id,
         order_id=order_id,
-        item={},  # заглушка — не используется
-        index=0,  # заглушка — не используется
+        item={},
+        index=0,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
     )

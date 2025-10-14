@@ -45,11 +45,6 @@ def start_undo_countdown(bot: Bot, key: Tuple[int, int]) -> None:
 
 
 async def _countdown_loop(bot: Bot, key: Tuple[int, int]) -> None:
-    """
-    Каждые ~200 мс проверяем остаток времени.
-    Правим клавиатуру только когда число секунд изменилось.
-    По истечении времени — убираем кнопки и фиксируем текст.
-    """
     last_shown = None
     while True:
         rec = UNDO_BIN.get(key)
