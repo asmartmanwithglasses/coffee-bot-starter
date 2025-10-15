@@ -35,7 +35,7 @@ async def init_db() -> None:
     async with aiosqlite.connect(DB_PATH) as conn:
         await conn.executescript(CREATE_SQL)
         await conn.commit()
-        db_logger.info("[DB] PATH =", DB_PATH.resolve())
+        db_logger.info("DB PATH: %s", DB_PATH.resolve())
 
 async def open_db() -> aiosqlite.Connection:
     global _DB
