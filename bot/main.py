@@ -20,11 +20,13 @@ after_order_kb, BTN_CANCEL, export_periods_kb, confirm_delete_kb, export_drink_k
 from .services.history import send_history_page
 from .services.stats import render_stats
 from .services.undo import remember_deleted, get_pending, seconds_left, start_undo_countdown, UNDO_DEADLINE_SEC, UNDO_BIN
-from .helpers import send_home, start_order_flow, period_bounds, orders_to_csv, iso_from_epoch
+from .helpers import send_home, start_order_flow, period_bounds, orders_to_csv
 from datetime import datetime, timedelta
 from .repo import (get_order_by_id, create_order, soft_delete, undo_delete, orders_for_period,
-                   drink_counts_between, count_total_orders, ping_db, count_orders)
+                   drink_counts_between, ping_db, count_orders, count_deleted, db_size_bytes, count_total_orders,
+                   last_order_at)
 import logging
+from .utils import fmt_ts, fmt_size
 # ---------- Конфигурация ----------
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
@@ -103,13 +105,11 @@ async def _undo_countdown(key: tuple[int, int]):
     payload = UNDO_BIN.pop(key, None)
     if payload:
         with suppress(TelegramBadRequest):
-            # снимаем клавиатуру (если ещё есть)
             await bot.edit_message_reply_markup(
                 chat_id=payload["chat_id"],
                 message_id=payload["message_id"],
                 reply_markup=None
             )
-            # финальный текст
             await bot.edit_message_text(
                 chat_id=payload["chat_id"],
                 message_id=payload["message_id"],
@@ -567,7 +567,7 @@ async def on_repeat_click(callback: CallbackQuery, state: FSMContext):
         f"☕ Напиток: *{DRINKS[drink]}*\n"
         f"📏 Размер: *{SIZES[size]}*\n"
         f"🥛 Молоко: *{'Добавить' if milk == 'yes' else 'Без молока'}*\n\n"
-        f"ID: *#{oid}* · {iso_from_epoch(created)}"
+        f"ID: *#{oid}* · {fmt_ts(created)}"
     )
 
     await callback.message.answer(preview_text, reply_markup=repeat_confirm_kb(oid), parse_mode="Markdown")
@@ -600,7 +600,7 @@ async def handle_repeat_confirm(callback: CallbackQuery, state: FSMContext):
         f"☕️ Напиток: *{DRINKS[drink]}*\n"
         f"📏 Размер: *{SIZES[size]}*\n"
         f"🥛 Молоко: *{'Добавить' if milk == 'yes' else 'Без молока'}*\n\n"
-        f"ID: *{new_id}* · {datetime.now().isoformat(timespec='seconds')}"
+        f"ID: *{new_id}* · {fmt_ts(_now_epoch_tz())}"
     )
     await callback.message.answer(text, parse_mode="Markdown")
     await state.clear()
@@ -694,6 +694,7 @@ async def handle_health(message: Message):
     if ADMIN_IDS and message.from_user.id not in ADMIN_IDS:
         await message.answer("Команда недоступна.")
         return
+
     uptime_sec = int(time.time() - (STARTED_AT or time.time()))
     uptime = _fmt_uptime(uptime_sec)
 
@@ -701,14 +702,22 @@ async def handle_health(message: Message):
     total = await count_total_orders()
     mine = await count_orders(user_id=message.from_user.id)
 
+    deleted = await count_deleted()
+    last_any = await last_order_at()  # epoch или None
+    last_mine = await last_order_at(message.from_user.id)
+    size_b = db_size_bytes()
+
     text = (
         "<b>Health</b>\n\n"
         f"Версия: <code>{BOT_VERSION}</code>\n"
         f"Аптайм: <code>{uptime}</code>\n"
         f"DB: <code>{DB_PATH.resolve()}</code>\n"
+        f"Размер БД: <code>{fmt_size(size_b)}</code>\n"
         f"Пинг БД: <code>{'OK' if ok else 'FAIL'}</code>\n"
-        f"Заказы (всего): <b>{total}</b>\n"
+        f"Заказы (всего): <b>{total}</b> · удалённые: <b>{deleted}</b>\n"
         f"Твои заказы: <b>{mine}</b>\n"
+        f"Последний заказ: <code>{fmt_ts(last_any)}</code>\n"
+        f"Твой последний: <code>{fmt_ts(last_mine)}</code>\n"
     )
     await message.answer(text, disable_web_page_preview=True)
 

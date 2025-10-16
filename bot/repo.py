@@ -3,8 +3,8 @@ from typing import Any, Optional
 import aiosqlite, time
 import logging
 from contextlib import contextmanager
-
-from .db import get_db
+import os
+from .db import get_db, DB_PATH
 
 
 # ---------- helpers ----------
@@ -210,3 +210,53 @@ async def ping_db() -> bool:
         return True
     except aiosqlite.Error:
         return False
+
+async def count_deleted() -> int:
+    db = get_db()
+    cur = await db.execute("SELECT COUNT(*) FROM orders WHERE deleted_at IS NOT NULL")
+    row = await cur.fetchone()
+    return int(row[0] or 0)
+
+async def last_order_ts_global() -> int | None:
+    db = get_db()
+    db.row_factory = None
+    cur = await db.execute(
+        "SELECT MAX(created_at) FROM orders WHERE deleted_at IS NULL"
+    )
+    (ts,) = await cur.fetchone()
+    return int(ts) if ts is not None else None
+
+async def last_order_ts_for(user_id: int) -> int | None:
+    db = get_db()
+    db.row_factory = None
+    cur = await db.execute(
+        "SELECT MAX(created_at) FROM orders WHERE user_id=? AND deleted_at IS NULL",
+        (user_id,),
+    )
+    (ts,) = await cur.fetchone()
+    return int(ts) if ts is not None else None
+
+def db_size_bytes() -> int:
+    try:
+        return os.path.getsize(DB_PATH)
+    except (FileNotFoundError, PermissionError, OSError):
+        return 0
+
+def human_bytes(n: int) -> str:
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if n < 1024:
+            return f"{n:.0f} {unit}"
+        n /= 1024
+    return f"{n:.0f} PB"
+
+async def last_order_at(user_id: int | None = None) -> int | None:
+    db = get_db()
+    if user_id is None:
+        sql = "SELECT MAX(created_at) FROM orders WHERE deleted_at IS NULL"
+        args = ()
+    else:
+        sql = "SELECT MAX(created_at) FROM orders WHERE user_id = ? AND deleted_at IS NULL"
+        args = (user_id,)
+    cur = await db.execute(sql, args)
+    row = await cur.fetchone()
+    return int(row[0]) if row and row[0] is not None else None
