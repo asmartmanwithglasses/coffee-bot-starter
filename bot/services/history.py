@@ -1,7 +1,7 @@
 from aiogram.types import Message
 from ..catalog import DRINKS, SIZES
 from ..keyboards import history_actions_kb, history_more_kb
-from ..repo import get_orders_page, count_orders
+from ..repo import get_orders_page, count_orders, user_order_number
 from ..utils import fmt_ts
 import logging
 
@@ -52,18 +52,15 @@ async def send_history_page(
     log.debug("history: uid=%s drink=%s count=%s offset=%s", uid, drink, total, offset)
 
     for r in rows:
-        oid = r["id"]
-        d_code = r["drink"]
-        size_code = r["size"]
-        milk = r["milk"]
-        created = r["created_at"]
+        oid, d_code, size_code, milk, created = (r["id"], r["drink"], r["size"], r["milk"], r["created_at"])
+        mine_no = await user_order_number(uid, int(created))
 
         text = (
             f"☕ <b>Напиток:</b> {_label_drink(d_code)}\n"
             f"📏 <b>Размер:</b> {_label_size(size_code)}\n"
             f"🥛 <b>Молоко:</b> {'Добавить' if milk == 'yes' else 'Без молока'}\n"
             f"🕒 <b>Время:</b> {fmt_ts(created)}\n"
-            f"ID: <code>#{oid}</code>"
+            f"ID: <code>#{oid} · Ваш №{mine_no}</code>"
         )
         await message.answer(text, reply_markup=history_actions_kb(oid), parse_mode="HTML")
 

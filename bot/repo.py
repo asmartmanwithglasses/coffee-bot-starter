@@ -260,3 +260,16 @@ async def last_order_at(user_id: int | None = None) -> int | None:
     cur = await db.execute(sql, args)
     row = await cur.fetchone()
     return int(row[0]) if row and row[0] is not None else None
+
+async def user_order_number(user_id: int, created_at: int) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            """
+            SELECT COUNT(*)
+            FROM orders
+            WHERE user_id = ? AND deleted = 0 AND created_at <= ?
+            """,
+            (user_id, created_at)
+        )
+        (cnt,) = await cur.fetchone()
+    return int(cnt)

@@ -281,7 +281,7 @@ def _start_of_today_epoch() -> int:
 @dp.message(Command("stats"))
 async def handle_stats(message: Message):
     uid = message.from_user.id
-    # today
+
     s_today = _start_of_today_epoch()
     u_today = s_today + 24 * 60 * 60
 
@@ -519,15 +519,18 @@ async def handle_milk(message: Message, state: FSMContext):
     )
     logger.info("[DB] created order id =", db_order_id)
 
-    summary = (
-    f"🧾 *Твой заказ готов!*\n\n"
-    f"☕ Напиток: *{DRINKS[data['drink']]}*\n"
-    f"📏 Размер: *{SIZES[data['size']]}*\n"
-    f"🥛 Молоко: *{'Добавить' if data['milk']=='yes' else 'Без молока'}*\n\n"
-    f"Спасибо за заказ! 🙌"
+    mine_no = await count_orders(user_id=message.from_user.id)
 
+    summary = (
+    f"🧾 <b>Твой заказ готов!</b>\n\n"
+    f"☕ Напиток: <b>{DRINKS[data['drink']]}</b>\n"
+    f"📏 Размер:  <b>{SIZES[data['size']]}</b>\n"
+    f"🥛 Молоко:  <b>{'Добавить' if data['milk']=='yes' else 'Без молока'}</b>\n"
+    f"ID: <code>#{db_order_id} · Ваш №{mine_no}</code>\n\n"
+    f"Спасибо за заказ! 🙌"
 )
-    await message.answer(summary, parse_mode="Markdown", reply_markup=after_order_kb())
+
+    await message.answer(summary, parse_mode="HTML", reply_markup=after_order_kb())
     await state.clear()
     await send_home(message)
 
