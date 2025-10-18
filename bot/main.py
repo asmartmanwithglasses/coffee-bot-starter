@@ -1,6 +1,6 @@
 from collections import Counter
 from contextlib import suppress
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.fsm.context import FSMContext
 from aiogram import F
 from aiogram.client.default import DefaultBotProperties
@@ -24,10 +24,15 @@ from .helpers import send_home, start_order_flow, period_bounds, orders_to_csv
 from datetime import datetime, timedelta
 from .repo import (get_order_by_id, create_order, soft_delete, undo_delete, orders_for_period,
                    drink_counts_between, ping_db, count_orders, count_deleted, db_size_bytes, count_total_orders,
-                   last_order_at)
+                   last_order_at, distinct_users_with_orders)
 import logging
 from .utils import fmt_ts, fmt_size
+from aiogram.fsm.state import State, StatesGroup
+
 # ---------- Конфигурация ----------
+class AdminBroadcast(StatesGroup):
+    text = State()
+
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
 ADMIN_IDS = {int(x) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip().isdigit()}
@@ -213,6 +218,42 @@ def _render_top(rows: list[tuple[str, int]], *, title: str, width: int = 12) -> 
     return "\n".join(lines)
 
 # ---------- 2. Хэндлеры ----------
+@dp.message(Command("broadcast"))
+async def start_broadcast(msg: Message, state: FSMContext):
+    if ADMIN_IDS and msg.from_user.id not in ADMIN_IDS:
+        return
+    await state.set_state(AdminBroadcast.text)
+    await msg.answer("✍️ Пришли текст рассылки (HTML разрешён). Отправка начнётся сразу всем пользователям.")
+
+@dp.message(AdminBroadcast.text)
+async def do_broadcast(msg: Message, state: FSMContext):
+    if ADMIN_IDS and msg.from_user.id not in ADMIN_IDS:
+        return
+
+    text = msg.html_text
+    await msg.answer("🚀 Стартую рассылку…")
+
+    users = await distinct_users_with_orders()
+    if not users:
+        await state.clear()
+        await msg.answer("Нет получателей (ещё нет ни одного заказа).")
+        return
+
+    sent = 0
+    for uid in users:
+        try:
+            await bot.send_message(uid, text, disable_web_page_preview=True)
+            sent += 1
+        except (TelegramForbiddenError, TelegramBadRequest):
+            pass
+        except Exception as e:
+            logger.warning("broadcast: fail user=%s: %s", uid, e)
+        await asyncio.sleep(0.03)
+
+    await state.clear()
+    await msg.answer(f"✅ Готово. Отправлено: {sent}/{len(users)}")
+
+
 @dp.message(F.text.in_({BTN_CANCEL, "Отменить заказ 🚫"}))
 async def handle_cancel_anywhere(msg: Message, state: FSMContext):
     await state.clear()
