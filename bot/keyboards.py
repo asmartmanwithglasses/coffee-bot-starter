@@ -2,6 +2,7 @@ from aiogram.types import (
     InlineKeyboardMarkup, InlineKeyboardButton,
     ReplyKeyboardMarkup, KeyboardButton
 )
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from .catalog import DRINKS
 
 BTN_CANCEL = "Отменить заказ 🚫"
@@ -52,13 +53,15 @@ def resume_or_cancel_kb():
         resize_keyboard=True,
         one_time_keyboard=True
     )
-def history_actions_kb(order_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[[
-            InlineKeyboardButton(text=f"🔁 Повторить #{order_id}", callback_data=f"repeat:{order_id}"),
-            InlineKeyboardButton(text=f"❌ Удалить #{order_id}", callback_data=f"delete:{order_id}")
-        ]]
+def history_actions_kb(order_id: int, display_no: int | None = None) -> InlineKeyboardMarkup:
+    label = f"№{display_no}" if display_no is not None else f"#{order_id}"
+    kb = InlineKeyboardBuilder()
+    kb.row(
+        InlineKeyboardButton(text=f"🔁 Повторить {label}", callback_data=f"repeat:{order_id}"),
+        InlineKeyboardButton(text=f"❌ Удалить {label}", callback_data=f"delete:{order_id}"),
     )
+    return kb.as_markup()
+
 def confirm_delete_kb(order_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[

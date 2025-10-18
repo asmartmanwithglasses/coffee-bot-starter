@@ -47,7 +47,7 @@ async def send_history_page(
             f"🕒 {fmt_ts(created)}\n"
             f"ID: <code>#{oid}</code> · Ваш №<b>{mine_no}</b>"
         )
-        await message.answer(text, reply_markup=history_actions_kb(oid), disable_web_page_preview=True)
+        await message.answer(text, parse_mode="HTML", reply_markup=history_actions_kb(oid, mine_no), disable_web_page_preview=True)
 
     remain = total - (offset + shown)
     if remain > 0:

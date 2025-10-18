@@ -24,7 +24,7 @@ from .helpers import send_home, start_order_flow, period_bounds, orders_to_csv
 from datetime import datetime, timedelta
 from .repo import (get_order_by_id, create_order, soft_delete, undo_delete, orders_for_period,
                    drink_counts_between, ping_db, count_orders, count_deleted, db_size_bytes, count_total_orders,
-                   last_order_at, distinct_users_with_orders)
+                   last_order_at, distinct_users_with_orders, user_order_number)
 import logging
 from .utils import fmt_ts, fmt_size
 from aiogram.fsm.state import State, StatesGroup
@@ -402,8 +402,11 @@ async def on_delete_cancel(callback: CallbackQuery):
     await callback.answer("Ок, не удаляем ✋")
     order_id = int(callback.data.split(":", 1)[1])
 
+    row = await get_order_by_id(user_id=callback.from_user.id, order_id=order_id)
+    mine_no = await user_order_number(callback.from_user.id, int(row[4])) if row else None
+
     await callback.message.edit_reply_markup(
-        reply_markup=history_actions_kb(order_id)
+        reply_markup=history_actions_kb(order_id, mine_no)
     )
 
 @dp.message(Command("order"))
@@ -591,30 +594,36 @@ async def on_repeat_click(callback: CallbackQuery, state: FSMContext):
 
     if await state.get_state():
         await callback.message.answer(
-            "🔔 Похоже, у тебя есть *незавершённый заказ*!\n\n",
-            reply_markup=resume_or_cancel_kb()
+            "🔔 Похоже, у тебя есть <b>незавершённый заказ</b>!\n"
+            "Выбери действие на клавиатуре ниже:",
+            reply_markup=resume_or_cancel_kb(),
+            parse_mode="HTML",
         )
         return
 
     row = await get_order_by_id(user_id=callback.from_user.id, order_id=order_id)
-
     if row is None:
         await callback.answer("Не нашёл такой заказ 😔", show_alert=True)
         return
 
     oid, drink, size, milk, created = row
-    oid = int(oid)
-    created = int(created)
+    mine_no = await user_order_number(callback.from_user.id, int(created))
 
     preview_text = (
-        f"*Повторить этот заказ?*\n\n"
-        f"☕ Напиток: *{DRINKS[drink]}*\n"
-        f"📏 Размер: *{SIZES[size]}*\n"
-        f"🥛 Молоко: *{'Добавить' if milk == 'yes' else 'Без молока'}*\n\n"
-        f"ID: *#{oid}* · {fmt_ts(created)}"
+        f"<b>Повторить этот заказ?</b>\n\n"
+        f"☕ <b>Напиток:</b> {DRINKS[drink]}\n"
+        f"📏 <b>Размер:</b> {SIZES[size]}\n"
+        f"🥛 <b>Молоко:</b> {'Добавить' if milk == 'yes' else 'Без молока'}\n"
+        f"🕒 {fmt_ts(created)}\n"
+        f"ID: <code>#{oid}</code> · Ваш №<b>{mine_no}</b>"
     )
 
-    await callback.message.answer(preview_text, reply_markup=repeat_confirm_kb(oid), parse_mode="Markdown")
+    await callback.message.answer(
+        preview_text,
+        reply_markup=repeat_confirm_kb(oid),  # подтверждаем всё равно по order_id
+        parse_mode="HTML",
+        disable_web_page_preview=True,
+    )
 
 @dp.callback_query(F.data.startswith("repeat_confirm:"))
 async def handle_repeat_confirm(callback: CallbackQuery, state: FSMContext):
