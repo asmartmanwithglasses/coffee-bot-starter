@@ -278,6 +278,12 @@ async def user_order_number(user_id: int, created_at: int) -> int:
     return int(cnt or 0)
 
 async def distinct_users_with_orders() -> list[int]:
-    async with aiosqlite.connect(DB_PATH) as db:
-        cur = await db.execute("SELECT DISTINCT user_id FROM orders WHERE deleted=0")
-        return [int(r[0]) for r in await cur.fetchall()]
+    db = get_db()
+    db.row_factory = None
+    cur = await db.execute("""
+            SELECT DISTINCT user_id
+            FROM orders
+            WHERE deleted_at IS NULL
+        """)
+    rows = await cur.fetchall()
+    return [int(r[0]) for r in rows if r and r[0] is not None]

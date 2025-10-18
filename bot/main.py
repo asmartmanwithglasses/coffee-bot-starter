@@ -1,6 +1,6 @@
 from collections import Counter
 from contextlib import suppress
-from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram import F
 from aiogram.client.default import DefaultBotProperties
@@ -221,33 +221,34 @@ def _render_top(rows: list[tuple[str, int]], *, title: str, width: int = 12) -> 
 @dp.message(Command("broadcast"))
 async def start_broadcast(msg: Message, state: FSMContext):
     if ADMIN_IDS and msg.from_user.id not in ADMIN_IDS:
+        await msg.answer("Команда недоступна.")
         return
+
     await state.set_state(AdminBroadcast.text)
-    await msg.answer("✍️ Пришли текст рассылки (HTML разрешён). Отправка начнётся сразу всем пользователям.")
+    await msg.answer("📝 Пришли текст рассылки (HTML разрешён). Отправка начнётся сразу всем пользователям с заказами.")
 
 @dp.message(AdminBroadcast.text)
 async def do_broadcast(msg: Message, state: FSMContext):
     if ADMIN_IDS and msg.from_user.id not in ADMIN_IDS:
+        await msg.answer("Команда недоступна.")
         return
 
     text = msg.html_text
-    await msg.answer("🚀 Стартую рассылку…")
-
     users = await distinct_users_with_orders()
+
     if not users:
         await state.clear()
-        await msg.answer("Нет получателей (ещё нет ни одного заказа).")
+        await msg.answer("Некому отправлять: в базе нет пользователей с заказами.")
         return
 
+    await msg.answer("🚀 Стартую рассылку…")
     sent = 0
     for uid in users:
         try:
-            await bot.send_message(uid, text, disable_web_page_preview=True)
+            await msg.bot.send_message(uid, text, disable_web_page_preview=True)
             sent += 1
-        except (TelegramForbiddenError, TelegramBadRequest):
-            pass
         except Exception as e:
-            logger.warning("broadcast: fail user=%s: %s", uid, e)
+            logger.warning("broadcast fail uid=%s: %s", uid, e)
         await asyncio.sleep(0.03)
 
     await state.clear()
