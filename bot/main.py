@@ -15,7 +15,7 @@ from .db import init_db, open_db, close_db, DB_PATH
 from .catalog import DRINKS, SIZES
 from .keyboards import (main_kb, drink_kb, size_kb, milk_kb, resume_or_cancel_kb,
 history_actions_kb, history_filter_kb, undo_delete_kb, repeat_confirm_kb,
-after_order_kb, BTN_CANCEL, export_periods_kb, confirm_delete_kb, export_drink_kb,
+                        BTN_CANCEL, export_periods_kb, confirm_delete_kb, export_drink_kb,
                         top_periods_kb)
 from .services.history import send_history_page
 from .services.stats import render_stats
@@ -256,7 +256,6 @@ async def handle_help(message: Message):
     await send_home(message)
     await message.answer("Также доступны: /history и /stats")
 
-@dp.message(F.text == "📜 История")
 @dp.message(Command("history"))
 async def handle_history(message: Message):
     await message.answer("Фильтр по напитку:", reply_markup=history_filter_kb())
@@ -522,15 +521,16 @@ async def handle_milk(message: Message, state: FSMContext):
     mine_no = await count_orders(user_id=message.from_user.id)
 
     summary = (
-    f"🧾 <b>Твой заказ готов!</b>\n\n"
+    "🧾 <b>Твой заказ готов!</b>\n\n"
     f"☕ Напиток: <b>{DRINKS[data['drink']]}</b>\n"
-    f"📏 Размер:  <b>{SIZES[data['size']]}</b>\n"
-    f"🥛 Молоко:  <b>{'Добавить' if data['milk']=='yes' else 'Без молока'}</b>\n"
-    f"ID: <code>#{db_order_id} · Ваш №{mine_no}</code>\n\n"
-    f"Спасибо за заказ! 🙌"
+    f"📏 Размер: <b>{SIZES[data['size']]}</b>\n"
+    f"🥛 Молоко: <b>{'Добавить' if data['milk']=='yes' else 'Без молока'}</b>\n"
+    f"🕒 {fmt_ts(int(time.time()))}\n"
+    f"ID: <code>#{db_order_id}</code> · Ваш №<b>{mine_no}</b>\n\n"
+    "Спасибо за заказ! 🙌"
 )
 
-    await message.answer(summary, parse_mode="HTML", reply_markup=after_order_kb())
+    await message.answer(summary, parse_mode="HTML", disable_web_page_preview=True)
     await state.clear()
     await send_home(message)
 

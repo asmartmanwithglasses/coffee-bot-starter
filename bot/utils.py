@@ -3,13 +3,12 @@ from datetime import datetime
 
 def fmt_ts(ts: int | float | None) -> str:
     if ts is None:
-        return "—"
+        return "-/-"
     try:
-        ts_int = int(ts)
-        dt = datetime.fromtimestamp(ts_int).astimezone()
+        dt = datetime.fromtimestamp(int(ts)).astimezone()
         return dt.strftime("%Y-%m-%d %H:%M:%S")
-    except (ValueError, TypeError, OSError, OverflowError):
-        return "—"
+    except (OSError, OverflowError, ValueError):
+        return "-/-"
 
 def fmt_size(num_bytes: int | float | None) -> str:
     if not num_bytes or num_bytes < 0:
