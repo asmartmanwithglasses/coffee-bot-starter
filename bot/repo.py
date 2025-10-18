@@ -239,7 +239,7 @@ async def last_order_ts_for(user_id: int) -> int | None:
 def db_size_bytes() -> int:
     try:
         return os.path.getsize(DB_PATH)
-    except (FileNotFoundError, PermissionError, OSError):
+    except (FileNotFoundError, OSError):
         return 0
 
 def human_bytes(n: int) -> str:
@@ -262,14 +262,17 @@ async def last_order_at(user_id: int | None = None) -> int | None:
     return int(row[0]) if row and row[0] is not None else None
 
 async def user_order_number(user_id: int, created_at: int) -> int:
-    async with aiosqlite.connect(DB_PATH) as db:
-        cur = await db.execute(
-            """
-            SELECT COUNT(*)
-            FROM orders
-            WHERE user_id = ? AND deleted = 0 AND created_at <= ?
-            """,
-            (user_id, created_at)
-        )
-        (cnt,) = await cur.fetchone()
-    return int(cnt)
+    db = get_db()
+    db.row_factory = None
+    cur = await db.execute(
+        """
+        SELECT COUNT(*)
+        FROM orders
+        WHERE user_id = ?
+          AND deleted_at IS NULL
+          AND created_at <= ?
+        """,
+        (user_id, created_at),
+    )
+    (cnt,) = await cur.fetchone()
+    return int(cnt or 0)
