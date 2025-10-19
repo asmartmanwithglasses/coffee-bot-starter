@@ -3,4 +3,3 @@ aiosqlite==0.20.0
 python-dotenv==1.0.1
 uvloop>=0.19; sys_platform == "linux"
 tzdata>=2024.1; sys_platform == "win32"
--r bot/requirements.txt
