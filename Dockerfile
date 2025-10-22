@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sqlite3 ca-certificates tzdata && \
     rm -rf /var/lib/apt/lists/*
 
-ARG REV=1
+ARG REV=3
 RUN echo "BUILD_REV=$REV"
 
 COPY requirements.txt .
