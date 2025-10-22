@@ -1,14 +1,15 @@
-from __future__ import annotations
+import os
+from zoneinfo import ZoneInfo
 from datetime import datetime
 
-def fmt_ts(ts: int | float | None) -> str:
-    if ts is None:
-        return "-/-"
-    try:
-        dt = datetime.fromtimestamp(int(ts)).astimezone()
-        return dt.strftime("%Y-%m-%d %H:%M:%S")
-    except (OSError, OverflowError, ValueError):
-        return "-/-"
+TZ = os.getenv("TZ", "UTC")
+
+def fmt_ts(dt: datetime | int | float) -> str:
+    if isinstance(dt, (int, float)):
+        dt = datetime.fromtimestamp(dt, tz=ZoneInfo("UTC"))
+    elif getattr(dt, "tzinfo", None) is None:
+        dt = dt.replace(tzinfo=ZoneInfo("UTC"))
+    return dt.astimezone(ZoneInfo(TZ)).strftime("%Y-%m-%d %H:%M:%S")
 
 def fmt_size(num_bytes: int | float | None) -> str:
     if not num_bytes or num_bytes < 0:

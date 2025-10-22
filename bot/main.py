@@ -218,6 +218,14 @@ def _render_top(rows: list[tuple[str, int]], *, title: str, width: int = 12) -> 
     return "\n".join(lines)
 
 # ---------- 2. Хэндлеры ----------
+async def _user_order_no_by_id(user_id: int, order_id: int) -> int:
+    rows = await orders_for_period(user_id=user_id, since=0, until=2_147_483_647, drink=None)
+    rows = sorted(rows, key=lambda r: r[4])
+    for i, (oid, *_rest) in enumerate(rows, start=1):
+        if oid == order_id:
+            return i
+    return 0
+
 @dp.message(Command("broadcast"))
 async def start_broadcast(msg: Message, state: FSMContext):
     if ADMIN_IDS and msg.from_user.id not in ADMIN_IDS:
@@ -346,8 +354,16 @@ async def handle_stats(message: Message):
 async def on_delete_first(callback: CallbackQuery):
     await callback.answer()
     order_id = int(callback.data.split(":", 1)[1])
+
+    row = await get_order_by_id(user_id=callback.from_user.id, order_id=order_id)
+    if not row:
+        await callback.answer("Не нашёл заказ 😕", show_alert=True)
+        return
+    _, _, _, _, created = row
+    mine_no = await user_order_number(callback.from_user.id, int(created))
+
     await callback.message.edit_reply_markup(
-        reply_markup=confirm_delete_kb(order_id)
+        reply_markup=confirm_delete_kb(order_id, mine_no)
     )
 
 @dp.callback_query(F.data.startswith("delete_confirm:"))
@@ -404,10 +420,13 @@ async def on_delete_cancel(callback: CallbackQuery):
     order_id = int(callback.data.split(":", 1)[1])
 
     row = await get_order_by_id(user_id=callback.from_user.id, order_id=order_id)
-    mine_no = await user_order_number(callback.from_user.id, int(row[4])) if row else None
+    if not row:
+        return
+    _, _, _, _, created = row
+    mine_no = await user_order_number(callback.from_user.id, int(created))
 
     await callback.message.edit_reply_markup(
-        reply_markup=history_actions_kb(order_id, mine_no)
+        reply_markup=history_actions_kb(order_id, display_no=mine_no)
     )
 
 @dp.message(Command("order"))
@@ -608,7 +627,7 @@ async def on_repeat_click(callback: CallbackQuery, state: FSMContext):
         return
 
     oid, drink, size, milk, created = row
-    mine_no = await user_order_number(callback.from_user.id, int(created))
+    mine_no = await _user_order_no_by_id(callback.from_user.id, oid)
 
     preview_text = (
         f"<b>Повторить этот заказ?</b>\n\n"
@@ -621,7 +640,7 @@ async def on_repeat_click(callback: CallbackQuery, state: FSMContext):
 
     await callback.message.answer(
         preview_text,
-        reply_markup=repeat_confirm_kb(oid),  # подтверждаем всё равно по order_id
+        reply_markup=repeat_confirm_kb(oid, mine_no),
         parse_mode="HTML",
         disable_web_page_preview=True,
     )

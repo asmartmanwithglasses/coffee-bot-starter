@@ -1,7 +1,7 @@
 from aiogram.types import Message
 from ..catalog import DRINKS, SIZES
 from ..keyboards import history_actions_kb, history_more_kb
-from ..repo import get_orders_page, count_orders, user_order_number
+from ..repo import orders_for_period, user_order_number
 from ..utils import fmt_ts
 import logging
 
@@ -15,45 +15,39 @@ def _label_drink(code: str) -> str:
 def _label_size(code: str) -> str:
     return SIZES.get(code, code.title())
 
-async def send_history_page(
-    message: Message,
-    drink: str = "all",
-    offset: int = 0,
-    user_id: int | None = None
-):
-    uid = user_id or message.from_user.id
-    total = await count_orders(user_id=uid, drink=None if drink in (None, "all") else drink)
-    if total == 0:
-        await message.answer(
-            "История заказа пока пуста 🗃" if drink in (None, "all") else f"Нет заказов для {_label_drink(drink)}."
-        )
-        return
+async def send_history_page(message: Message, drink: str, offset: int, *, user_id: int, page_size: int = 5) -> None:
+    drink_code = None if (drink is None or drink.lower() == "all") else drink.lower()
 
-    rows = await get_orders_page(user_id=uid, drink=None if drink in (None, "all") else drink,
-                                 offset=offset, limit=PAGE_SIZE)
+    rows = await orders_for_period(
+        user_id=user_id,
+        since=0,
+        until=2_147_483_647,
+        drink=drink_code
+    )
+
     if not rows:
+        await message.answer("История заказа пока пуста 🧾")
         return
-    shown = min(PAGE_SIZE, total - offset)
-    if offset == 0:
-        await message.answer(f"История: всего {total} (показано {shown})")
 
-    for r in rows:
-        oid, d_code, size_code, milk, created = (r["id"], r["drink"], r["size"], r["milk"], r["created_at"])
-        mine_no = await user_order_number(uid, int(created))
+    page = rows[offset: offset + page_size]
+    remain = max(0, len(rows) - (offset + page_size))
+
+    for oid, dcode, size, milk, created in page:
+        mine_no = await user_order_number(user_id, int(created))
         text = (
-            f"☕ Напиток: <b>{_label_drink(d_code)}</b>\n"
-            f"📏 Размер: <b>{_label_size(size_code)}</b>\n"
-            f"🥛 Молоко: <b>{'Добавить' if milk == 'yes' else 'Без молока'}</b>\n"
+            f"☕ <b>Напиток:</b> {DRINKS.get(dcode, dcode.title())}\n"
+            f"📏 <b>Размер:</b> {SIZES.get(size, size.title())}\n"
+            f"🥛 <b>Молоко:</b> {'Добавить' if milk == 'yes' else 'Без молока'}\n"
             f"🕒 {fmt_ts(created)}\n"
             f"ID: <code>#{oid}</code> · Ваш №<b>{mine_no}</b>"
         )
-        await message.answer(text, parse_mode="HTML", reply_markup=history_actions_kb(oid, mine_no), disable_web_page_preview=True)
+        kb = history_actions_kb(oid, display_no=mine_no)
+        await message.answer(text, reply_markup=kb, parse_mode="HTML", disable_web_page_preview=True)
 
-    remain = total - (offset + shown)
     if remain > 0:
         await message.answer(
-            f"Показать ещё {remain}",
-            reply_markup=history_more_kb(drink=drink, offset=offset + shown, remain=remain),
+            "Показать ещё?",
+            reply_markup=history_more_kb(drink=drink if drink else "all", offset=offset + page_size, remain=remain)
         )
 
 def parse_cb(data: str) -> dict:
