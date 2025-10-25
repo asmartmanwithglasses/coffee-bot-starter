@@ -19,13 +19,11 @@
 
 ## 🧪 Скриншоты
 (ещё в `docs/overview.md`)
-![История1](docs/img/history1.png)
-![История2](docs/img/history2.png)
-![Статистика](docs/img/stats.png)
-![Топ](docs/img/top.png)
-![Экспорт1](docs/img/export1.png)
-![Экспорт2](docs/img/export2.png)
-![Экспорт3](docs/img/export3.png)
+<p align="center">
+  <img src="docs/img/history.png"     alt="История" width="31%">
+  <img src="docs/img/export.png"      alt="Экспорт" width="31%">
+  <img src="docs/img/stats-top.png"   alt="Заказ"   width="31%">
+</p>
 
 <p align="center">
   <img src="docs/img/demo.gif" alt="Demo" width="720">
