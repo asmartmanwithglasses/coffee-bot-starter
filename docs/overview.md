@@ -14,13 +14,11 @@
 - Защита от «повторных» кликов и `message is not modified`.
 
 ## Скриншоты
-![История 1](img/history1.png)
-![История 2](img/history1.png)
-![Статистика](img/stats.png)
-![Топ](img/top.png)
-![Экспорт1](img/export1.png)
-![Экспорт2](img/export2.png)
-![Экспорт3](img/export3.png)
+<p align="center">
+  <img src="docs/img/history.png"     alt="История" width="31%">
+  <img src="docs/img/export.png"      alt="Экспорт" width="31%">
+  <img src="docs/img/stats-top.png"   alt="Заказ"   width="31%">
+</p>
 
 ## Стек и деплой
 - Python 3.11+, Aiogram 3.x, aiosqlite.
