@@ -19,11 +19,10 @@
 
 ## 🧪 Скриншоты
 (ещё в `docs/overview.md`)
-<p align="center">
-  <img src="docs/img/history.png"     alt="История" width="31%">
-  <img src="docs/img/export.png"      alt="Экспорт" width="31%">
-  <img src="docs/img/stats-top.png"   alt="Заказ"   width="31%">
-</p>
+| История с действиями | Экспорт CSV | Статистика и ТОП |
+|---|---|---|
+| <img src="docs/img/history.png"     alt="История"        width="290"> | <img src="docs/img/export.png"      alt="Экспорт"        width="290"> | <img src="docs/img/stats-top.png"   alt="Статистика и топ" width="290"> |
+
 
 <p align="center">
   <img src="docs/img/demo.gif" alt="Demo" width="720">

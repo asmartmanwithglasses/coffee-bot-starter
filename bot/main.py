@@ -16,7 +16,7 @@ from .catalog import DRINKS, SIZES
 from .keyboards import (main_kb, drink_kb, size_kb, milk_kb, resume_or_cancel_kb,
 history_actions_kb, history_filter_kb, undo_delete_kb, repeat_confirm_kb,
                         BTN_CANCEL, export_periods_kb, confirm_delete_kb, export_drink_kb,
-                        top_periods_kb)
+                        top_periods_kb, after_order_kb)
 from .services.history import send_history_page
 from .services.stats import render_stats
 from .services.undo import remember_deleted, get_pending, seconds_left, start_undo_countdown, UNDO_DEADLINE_SEC, UNDO_BIN
@@ -596,7 +596,7 @@ async def handle_milk(message: Message, state: FSMContext):
 
     await message.answer(summary, parse_mode="HTML", disable_web_page_preview=True)
     await state.clear()
-    await send_home(message)
+    await message.answer("Что дальше? 🙂", reply_markup=after_order_kb())
 
 @dp.message(F.text == "➕ Заказать ещё")
 async def handle_order_again(message: Message, state: FSMContext):
